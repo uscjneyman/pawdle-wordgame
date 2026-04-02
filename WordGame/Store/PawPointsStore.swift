@@ -4,7 +4,8 @@ import Combine
 /// Persists the player's paw-point balance to UserDefaults.
 /// Players start with 2 paw points (enough for 2 reveals).
 /// Winning games earns more; each paw reveal costs 1 point.
-class PawPointsStore: ObservableObject {
+@MainActor
+final class PawPointsStore: ObservableObject {
     @Published private(set) var balance: Int
 
     private let key = "pawdle_paw_points"
@@ -26,6 +27,13 @@ class PawPointsStore: ObservableObject {
         balance -= cost
         save()
         return true
+    }
+
+    func setBalance(_ newValue: Int) {
+        let clamped = max(0, newValue)
+        guard clamped != balance else { return }
+        balance = clamped
+        save()
     }
 
     private func save() {

@@ -42,3 +42,5 @@ struct DictionaryService {
         return "No definition found."
     }
 }
+
+extension DictionaryService: DictionaryProviding {}

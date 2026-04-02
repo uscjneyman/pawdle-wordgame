@@ -1,0 +1,26 @@
+{
+  "name": "wordgame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "supabase:test": "node scripts/supabase-test-query.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uscjneyman/pawdle-wordgame.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/uscjneyman/pawdle-wordgame/issues"
+  },
+  "homepage": "https://github.com/uscjneyman/pawdle-wordgame#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.100.0",
+    "dotenv": "^17.3.1"
+  }
+}

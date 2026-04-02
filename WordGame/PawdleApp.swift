@@ -7,6 +7,10 @@ struct PawdleApp: App {
     // Shared app state injected once and consumed by multiple screens.
     @StateObject private var wonWordsStore = WonWordsStore()
     @StateObject private var pawPointsStore = PawPointsStore()
+    @StateObject private var authStore = AuthStore()
+    @StateObject private var syncStatusStore = SyncStatusStore()
+    @StateObject private var communityStore = CommunityStore()
+    private let appViewModel = AppViewModel()
     @State private var showSplash = true
     @State private var splashScheduled = false
 
@@ -14,7 +18,7 @@ struct PawdleApp: App {
         WindowGroup {
             NavigationStack {
                 ZStack {
-                    StartView()
+                    HomeContainerView()
                         .opacity(showSplash ? 0 : 1)
                         .scaleEffect(showSplash ? 1.03 : 1.0)
 
@@ -27,6 +31,9 @@ struct PawdleApp: App {
             // Make stores available to the whole navigation tree.
             .environmentObject(wonWordsStore)
             .environmentObject(pawPointsStore)
+            .environmentObject(authStore)
+            .environmentObject(syncStatusStore)
+            .environmentObject(communityStore)
             .onAppear {
                 // Start ambient loop when the app UI first appears.
                 SoundManager.shared.startBackgroundMusic()
@@ -39,17 +46,58 @@ struct PawdleApp: App {
                         showSplash = false
                     }
                 }
+
+                if authStore.isAuthenticated {
+                    appViewModel.handleOnAppear(
+                        authStore: authStore,
+                        pawPointsStore: pawPointsStore,
+                        wonWordsStore: wonWordsStore,
+                        syncStatusStore: syncStatusStore
+                    )
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 // Keep audio behavior in sync with foreground/background state.
                 switch newPhase {
                 case .active:
                     SoundManager.shared.resumeBackgroundMusic()
+                    appViewModel.handleScenePhaseChange(
+                        newPhase,
+                        authStore: authStore,
+                        pawPointsStore: pawPointsStore,
+                        wonWordsStore: wonWordsStore,
+                        syncStatusStore: syncStatusStore
+                    )
                 case .inactive, .background:
                     SoundManager.shared.stopBackgroundMusic()
                 @unknown default:
                     break
                 }
+            }
+            .onChange(of: authStore.isAuthenticated) { _, authed in
+                appViewModel.handleAuthChange(
+                    authed,
+                    authStore: authStore,
+                    pawPointsStore: pawPointsStore,
+                    wonWordsStore: wonWordsStore,
+                    syncStatusStore: syncStatusStore
+                )
+            }
+            .onChange(of: pawPointsStore.balance) { _, _ in
+                appViewModel.handleLocalDataChange(
+                    authStore: authStore,
+                    pawPointsStore: pawPointsStore,
+                    wonWordsStore: wonWordsStore,
+                    syncStatusStore: syncStatusStore
+                )
+            }
+            .onChange(of: wonWordsStore.wonWords) { _, _ in
+                appViewModel.handleLocalDataChange(
+                    authStore: authStore,
+                    pawPointsStore: pawPointsStore,
+                    wonWordsStore: wonWordsStore,
+                    syncStatusStore: syncStatusStore
+                )
             }
         }
     }

@@ -4,7 +4,14 @@ import Combine
 struct HowToPlayView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentPage = 0
-    private let pageCount = 5
+    private let pageCount = 6
+    let isRequired: Bool
+    var onComplete: (() -> Void)?
+
+    init(isRequired: Bool = false, onComplete: (() -> Void)? = nil) {
+        self.isRequired = isRequired
+        self.onComplete = onComplete
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,6 +25,7 @@ struct HowToPlayView: View {
                         GameplayPage().tag(2)
                         ColorsPage().tag(3)
                         RewardsPage().tag(4)
+                        CommunityPage().tag(5)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .animation(.easeInOut(duration: 0.3), value: currentPage)
@@ -64,7 +72,7 @@ struct HowToPlayView: View {
                                     .clipShape(Capsule())
                                 }
                             } else {
-                                Button { dismiss() } label: {
+                                Button { finishTutorial() } label: {
                                     Text("Let's Play!")
                                         .font(.subheadline.weight(.bold))
                                         .padding(.horizontal, 20)
@@ -83,11 +91,22 @@ struct HowToPlayView: View {
             .navigationTitle("How to Play")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Theme.accent)
+                if !isRequired {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { finishTutorial() }
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
             }
+            .interactiveDismissDisabled(isRequired)
+        }
+    }
+
+    private func finishTutorial() {
+        if let onComplete {
+            onComplete()
+        } else {
+            dismiss()
         }
     }
 }
@@ -463,6 +482,81 @@ private struct RewardsPage: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+        .animation(.easeOut(duration: 0.4).delay(delay), value: appeared)
+    }
+}
+
+// MARK: - Page 6: Community
+
+private struct CommunityPage: View {
+    @State private var appeared = false
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Text("🌍")
+                .font(.system(size: 56))
+                .opacity(appeared ? 1 : 0)
+                .animation(.easeOut.delay(0.1), value: appeared)
+
+            Text("Show Off & Community")
+                .font(.title2.bold())
+                .foregroundStyle(Theme.accent)
+                .opacity(appeared ? 1 : 0)
+                .animation(.easeOut.delay(0.2), value: appeared)
+
+            Text("Won a word? Share it with the world!")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .opacity(appeared ? 1 : 0)
+                .animation(.easeOut.delay(0.35), value: appeared)
+
+            VStack(alignment: .leading, spacing: 16) {
+                communityRow(emoji: "👤", label: "Profile",
+                             detail: "Tap the profile icon (top-right) to see your username or log out.",
+                             delay: 0.5)
+                communityRow(emoji: "❓", label: "Instructions",
+                             detail: "Tap the ? icon (top-left) anytime to revisit these tips.",
+                             delay: 0.6)
+                communityRow(emoji: "👈", label: "Swipe Left",
+                             detail: "Swipe left from the home screen to open Won Words & Community.",
+                             delay: 0.7)
+                communityRow(emoji: "⭐️", label: "Show Off",
+                             detail: "After winning or from Won Words, tap Show Off to share your achievement.",
+                             delay: 0.8)
+                communityRow(emoji: "💬", label: "Share via Message",
+                             detail: "Send a celebration card with your word, sticker, and stats to friends.",
+                             delay: 0.9)
+                communityRow(emoji: "🌍", label: "Publish to Community",
+                             detail: "Post your win to the public Community board for everyone to see.",
+                             delay: 1.0)
+            }
+            .padding(.horizontal, 8)
+
+            Spacer()
+        }
+        .padding(24)
+        .onAppear { appeared = true }
+    }
+
+    private func communityRow(emoji: String, label: String, detail: String, delay: Double) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Text(emoji)
+                .font(.title3)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline.bold())
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(x: appeared ? 0 : -30)
         .animation(.easeOut(duration: 0.4).delay(delay), value: appeared)
     }
 }

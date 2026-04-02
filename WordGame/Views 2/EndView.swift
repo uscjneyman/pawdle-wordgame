@@ -9,6 +9,8 @@ struct EndView: View {
     @State private var hasSaved = false
     @State private var animateSticker = false
     @State private var copied = false
+    @State private var showShowOff = false
+    @State private var savedRecord: WonWord?
 
     private var isWin: Bool { viewModel.session?.status == .won }
 
@@ -104,31 +106,26 @@ struct EndView: View {
 
                     // Buttons
                     VStack(spacing: 12) {
+                        if isWin, let record = savedRecord {
+                            Button {
+                                showShowOff = true
+                            } label: {
+                                Label("Show Off", systemImage: "star.circle.fill")
+                                    .fontWeight(.semibold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Theme.accent)
+                                    .foregroundColor(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                        }
+
                         Button {
-                            viewModel.playAgain()
+                            viewModel.goHome()
                         } label: {
                             HStack {
                                 Image(systemName: "house.fill")
                                 Text("Home")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Theme.tileEmpty)
-                            .foregroundColor(Theme.accent)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
-
-                        Button {
-                            UIPasteboard.general.string = viewModel.shareText()
-                            copied = true
-                            Task {
-                                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                                copied = false
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: copied ? "checkmark" : "square.and.arrow.up")
-                                Text(copied ? "Copied!" : "Share Result")
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -157,10 +154,21 @@ struct EndView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showShowOff) {
+            if let record = savedRecord {
+                ShowOffMenuView(wonWord: record)
+            }
+        }
         .onAppear {
             guard !hasSaved else { return }
 
             if isWin, let s = viewModel.session {
+                // Invariant: won word must be the exact answer returned by the riddle API for this session.
+                guard viewModel.currentRiddleAnswer?.lowercased() == s.secretWord.lowercased() else {
+                    hasSaved = true
+                    return
+                }
+
                 let sticker = Sticker.award(for: s.guesses.count)
                 earnedSticker = sticker
 
@@ -175,6 +183,7 @@ struct EndView: View {
                     wordLength: s.wordLength
                 )
                 wonWordsStore.add(record)
+                savedRecord = record
                 hasSaved = true
             }
 

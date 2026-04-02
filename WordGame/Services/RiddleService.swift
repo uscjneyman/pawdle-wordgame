@@ -6,7 +6,16 @@ struct RiddleService {
 
     // MARK: - Config
 
-    private let baseURL = "https://pawdle-riddle-api-jneyman-8d9a88151bf0.herokuapp.com"
+    private let baseURL: String
+    private let session: URLSession
+
+    init(
+        baseURL: String = "https://pawdle-riddle-api-jneyman-8d9a88151bf0.herokuapp.com",
+        session: URLSession = .shared
+    ) {
+        self.baseURL = baseURL
+        self.session = session
+    }
 
     // MARK: - Response types
 
@@ -45,7 +54,7 @@ struct RiddleService {
             }
 
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await session.data(for: request)
                 guard let http = response as? HTTPURLResponse,
                       (200...299).contains(http.statusCode) else {
                     let code = (response as? HTTPURLResponse)?.statusCode ?? -1
@@ -88,7 +97,7 @@ struct RiddleService {
             }
 
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await session.data(for: request)
                 guard let http = response as? HTTPURLResponse,
                       (200...299).contains(http.statusCode) else {
                     return nil
@@ -198,3 +207,5 @@ struct RiddleService {
         }
     }
 }
+
+extension RiddleService: RiddleProviding {}

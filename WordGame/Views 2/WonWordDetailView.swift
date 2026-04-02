@@ -5,6 +5,7 @@ struct WonWordDetailView: View {
 
     @State private var definition: String?
     @State private var isLoading = true
+    @State private var showShowOff = false
 
     private let dictionaryService = DictionaryService()
 
@@ -76,11 +77,28 @@ struct WonWordDetailView: View {
                         .padding(.horizontal, 24)
                     }
 
+                    // Show Off button
+                    Button {
+                        showShowOff = true
+                    } label: {
+                        Label("Show Off", systemImage: "star.circle.fill")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Theme.accent)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, 24)
+
                     Spacer(minLength: 32)
                 }
             }
         }
         .navigationTitle("Details")
+        .sheet(isPresented: $showShowOff) {
+            ShowOffMenuView(wonWord: wonWord)
+        }
         .task {
             definition = await dictionaryService.fetchDefinition(for: wonWord.word)
             isLoading = false

@@ -1,45 +1,44 @@
 Pawdle (WordGame) - Architecture and API Overview
 
 Project Summary
-Pawdle is an iOS SwiftUI riddle-driven word game. A player gets a riddle, then guesses a hidden word using Wordle-style feedback (correct/present/absent). The app includes local persistence, category/difficulty filters, rewards, and audio feedback.
+Pawdle is an iOS SwiftUI riddle-driven word game. A player gets a riddle, then guesses a hidden word using Wordle-style feedback (correct/present/absent). The app includes local persistence, cloud sync via Supabase, category/difficulty filters, rewards, a public community board, and audio feedback.
 
 Architecture
 The app follows a lightweight MVVM structure with clear separation of concerns.
 
 1. App Layer
 - PawdleApp.swift
-- Creates shared state stores and injects them as EnvironmentObjects.
+- Creates shared state stores (including CommunityStore) and injects them as EnvironmentObjects.
 - Starts/stops looping background music based on scene phase (active/background).
 
 2. View Layer (SwiftUI screens)
-- StartView: Setup screen (category, word length, difficulty), starts a game.
+- HomeContainerView: Root swipeable container (swipe between home and collection).
+- StartView: Setup screen with top nav bar (? instructions, sync status, profile icon).
 - GameView: Main gameplay UI (grid, keyboard, hints, reveal actions).
-- EndView: Win/loss summary, share, rewards.
-- WonWordsView: List of completed wins with swipe-to-delete.
-- WonWordDetailView: Detail page for a saved win.
-- HowToPlayView: Onboarding/tutorial pages.
+- EndView: Win/loss summary with Show Off button and Play Again.
+- CollectionTabView: Tabbed view switching between Won Words and Community.
+- WonWordsView / WonWordDetailView: Won words list and detail with Show Off.
+- CommunityView: Public feed of community posts.
+- ShowOffMenuView / ShowOffCardView: Share via message or publish to community.
+- ProfileView: Username, paw points, sync status, logout.
+- TopNavBar: Shared navigation bar across screens.
+- OnboardingOverlayView: On-screen arrows tutorial for new users.
+- HowToPlayView: 6-page tutorial including community features.
 
 3. ViewModel Layer
-- GameViewModel.swift
-- Owns game session state, guessing logic, keyboard coloring, animation triggers, hint/reveal rules, scoring, and end-game handling.
-- Coordinates async API calls via service layer.
-- Updates UI through @Published properties.
+- GameViewModel.swift: Game state, guessing, scoring, playAgain(), goHome().
+- AppViewModel.swift: App-level sync orchestration.
 
 4. Model Layer
-- GameModels.swift: LetterState, Guess, LetterResult, GameSession, GameStatus.
-- WordCategory.swift: Category enum and seed-word pools.
-- WonWord.swift: Persisted completed game record.
-- Sticker.swift: Reward model and rarity logic.
+- GameModels.swift, GameEngine.swift, WordCategory.swift, WonWord.swift, Sticker.swift, CommunityPost.swift.
 
 5. Service Layer
-- RiddleService.swift: Main game-content source from custom API.
-- DictionaryService.swift: Fetches definitions used as optional hints/details.
-- WordService.swift: Datamuse-backed fallback word source and filtering.
-- SoundManager.swift: Background music + built-in success/failure tones.
+- RiddleService, DictionaryService, WordService, SoundManager.
+- SupabaseAuthService, SupabasePlayerDataService, CommunityService.
+- SyncErrorClassifier, ServiceProtocols.
 
-6. Store Layer (local persistence)
-- WonWordsStore.swift: Save/load won game records to UserDefaults (JSON).
-- PawPointsStore.swift: Save/load paw-point balance to UserDefaults.
+6. Store Layer
+- WonWordsStore, PawPointsStore, AuthStore, SyncStatusStore, CommunityStore.
 
 
 How the App Works (Runtime Flow)
@@ -139,6 +138,24 @@ Concurrency and Networking
 - Networking uses async/await with URLSession.
 - UI state updates are coordinated on @MainActor via GameViewModel.
 - Non-blocking tasks are used for fetches and delayed transitions.
+- API networking code is contained in Services and consumed by ViewModels through protocols.
+
+
+Testing (Swift Testing)
+- Test file: `WordGameTests/WordGameTests.swift`
+- Added focused tests for the most logic-heavy pieces:
+  1. `GameEngine` duplicate-letter evaluation correctness.
+  2. `GameEngine` paw-point reward mapping by guess count.
+  3. `SyncErrorClassifier` offline error detection for sync status behavior.
+
+Why these tests matter:
+- They cover deterministic rule logic that can regress silently but is central to gameplay quality and UX.
+- They validate offline/sync classification behavior that drives user-facing sync status.
+
+
+SwiftData Status
+- SwiftData is not currently used in this project.
+- Persistence currently uses UserDefaults-backed stores (offline-first), plus Supabase cloud sync.
 
 
 Notes for Contributors

@@ -402,6 +402,9 @@
 				DEVELOPMENT_TEAM = 27CCB8PHUP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_YrmonVW1diK_jGB7rv3jgQ_Jl3eNor9;
+				INFOPLIST_KEY_SUPABASE_EMAIL_REDIRECT_TO = "https://supabase.com";
+				INFOPLIST_KEY_SUPABASE_URL = "https://cyuamhemphmvbtquxali.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -437,6 +440,9 @@
 				DEVELOPMENT_TEAM = 27CCB8PHUP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_YrmonVW1diK_jGB7rv3jgQ_Jl3eNor9;
+				INFOPLIST_KEY_SUPABASE_EMAIL_REDIRECT_TO = "https://supabase.com";
+				INFOPLIST_KEY_SUPABASE_URL = "https://cyuamhemphmvbtquxali.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

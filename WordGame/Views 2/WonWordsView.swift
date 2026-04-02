@@ -8,27 +8,36 @@ struct WonWordsView: View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
-            if store.wonWords.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(store.wonWords) { w in
-                        NavigationLink {
-                            WonWordDetailView(wonWord: w)
-                        } label: {
-                            row(w)
+            VStack(spacing: 0) {
+                // Clear All header
+                if !store.wonWords.isEmpty {
+                    HStack {
+                        Spacer()
+                        Button("Clear All", role: .destructive) {
+                            showClearAlert = true
                         }
+                        .font(.subheadline)
                     }
-                    .onDelete(perform: store.delete)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
                 }
-                .listStyle(.plain)
-            }
-        }
-        .navigationTitle("Won Words")
-        .toolbar {
-            if !store.wonWords.isEmpty {
-                Button("Clear All", role: .destructive) {
-                    showClearAlert = true
+
+                if store.wonWords.isEmpty {
+                    Spacer()
+                    emptyState
+                    Spacer()
+                } else {
+                    List {
+                        ForEach(store.wonWords) { w in
+                            NavigationLink {
+                                WonWordDetailView(wonWord: w)
+                            } label: {
+                                row(w)
+                            }
+                        }
+                        .onDelete(perform: store.delete)
+                    }
+                    .listStyle(.plain)
                 }
             }
         }

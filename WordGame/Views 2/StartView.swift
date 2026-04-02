@@ -4,14 +4,25 @@ struct StartView: View {
     @StateObject private var viewModel = GameViewModel()
     @EnvironmentObject var wonWordsStore: WonWordsStore
     @EnvironmentObject var pawPointsStore: PawPointsStore
+    @EnvironmentObject var authStore: AuthStore
+    @EnvironmentObject var syncStatusStore: SyncStatusStore
+    @AppStorage("didCompleteTutorial") private var didCompleteTutorial = false
     @State private var showInstructions = false
+    @State private var showProfile = false
+    @State private var showOnboardingOverlay = false
+    @State private var showTutorial = false
+    @State private var showAuth = false
+    @State private var didRunLaunchFlow = false
 
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                Spacer()
+            VStack(spacing: 16) {
+                TopNavBar(
+                    onInstructions: { showInstructions = true },
+                    onProfile: { showProfile = true }
+                )
 
                 // Title
                 VStack(spacing: 6) {
@@ -106,10 +117,14 @@ struct StartView: View {
 
                 Spacer()
 
-                // Buttons
+                // Start Game button
                 VStack(spacing: 12) {
                     Button {
-                        viewModel.startNewGame()
+                        if authStore.isAuthenticated {
+                            viewModel.startNewGame()
+                        } else {
+                            showAuth = true
+                        }
                     } label: {
                         HStack(spacing: 8) {
                             if viewModel.isLoading {
@@ -125,33 +140,26 @@ struct StartView: View {
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .disabled(viewModel.isLoading)
-
-                    NavigationLink {
-                        WonWordsView()
-                    } label: {
-                        Text("Won Words")
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Theme.tileEmpty)
-                            .foregroundColor(Theme.accent)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-
-                    Button {
-                        showInstructions = true
-                    } label: {
-                        Label("How to Play", systemImage: "questionmark.circle")
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Theme.tileEmpty)
-                            .foregroundColor(.secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
+                    .disabled(viewModel.isLoading || !authStore.isAuthenticated)
                 }
                 .padding(.horizontal, 32)
+
+                if !authStore.isAuthenticated {
+                    Button("Log In or Sign Up") {
+                        showAuth = true
+                    }
+                    .font(.callout.bold())
+                    .foregroundStyle(Theme.accent)
+                }
+
+                // Swipe hint
+                HStack(spacing: 4) {
+                    Text("Swipe left for Won Words & Community")
+                        .font(.caption2)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
 
                 // Error
                 if let error = viewModel.errorMessage {
@@ -168,12 +176,32 @@ struct StartView: View {
                     .padding(.horizontal)
                 }
 
-                Spacer()
+            }
+
+            // On-screen tutorial overlay for new users
+            if showOnboardingOverlay {
+                OnboardingOverlayView {
+                    withAnimation {
+                        showOnboardingOverlay = false
+                    }
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showInstructions) {
             HowToPlayView()
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+        }
+        .fullScreenCover(isPresented: $showTutorial) {
+            HowToPlayView(isRequired: true) {
+                didCompleteTutorial = true
+                showTutorial = false
+            }
+        }
+        .sheet(isPresented: $showAuth) {
+            AuthView(isPresented: $showAuth)
         }
         .navigationDestination(isPresented: $viewModel.isGameActive) {
             GameView(viewModel: viewModel)
@@ -181,6 +209,26 @@ struct StartView: View {
         .onAppear {
             viewModel.pawPointsStore = pawPointsStore
             viewModel.wonWordsStore = wonWordsStore
+            guard !didRunLaunchFlow else { return }
+            didRunLaunchFlow = true
+            if !didCompleteTutorial {
+                showTutorial = true
+            } else if !authStore.isAuthenticated {
+                showAuth = true
+            }
+        }
+        .onChange(of: showTutorial) { _, showing in
+            // Tutorial just dismissed — show auth if needed
+            if !showing && didCompleteTutorial && !authStore.isAuthenticated {
+                showAuth = true
+            }
+        }
+        // When auth succeeds: dismiss sheet, show onboarding overlay.
+        .onChange(of: authStore.isAuthenticated) { _, isAuthed in
+            if isAuthed {
+                showAuth = false
+                withAnimation { showOnboardingOverlay = true }
+            }
         }
     }
 }

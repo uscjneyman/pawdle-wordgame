@@ -13,6 +13,7 @@ struct WonWord: Codable, Identifiable, Equatable {
     let wordLength: Int?
 
     init(
+        id: UUID = UUID(),
         word: String,
         tries: Int,
         maxAttempts: Int,
@@ -23,7 +24,7 @@ struct WonWord: Codable, Identifiable, Equatable {
         difficulty: Int? = nil,
         wordLength: Int? = nil
     ) {
-        self.id = UUID()
+        self.id = id
         self.word = word
         self.tries = tries
         self.maxAttempts = maxAttempts

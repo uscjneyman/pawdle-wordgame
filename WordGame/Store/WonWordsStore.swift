@@ -3,7 +3,8 @@ import Combine
 import Foundation
 
 /// Persists WonWord records to UserDefaults as JSON.
-class WonWordsStore: ObservableObject {
+@MainActor
+final class WonWordsStore: ObservableObject {
     @Published private(set) var wonWords: [WonWord] = []
 
     private let key = "pawdle_won_words"
@@ -13,6 +14,25 @@ class WonWordsStore: ObservableObject {
     func add(_ record: WonWord) {
         // Keep most recent wins at the top of the list.
         wonWords.insert(record, at: 0)   // newest first
+        save()
+    }
+
+    func merge(_ records: [WonWord]) {
+        guard !records.isEmpty else { return }
+
+        var combined = Dictionary(uniqueKeysWithValues: wonWords.map { ($0.id, $0) })
+        for record in records {
+            combined[record.id] = record
+        }
+
+        wonWords = combined.values.sorted { $0.date > $1.date }
+        save()
+    }
+
+    func replaceAll(_ records: [WonWord]) {
+        let sorted = records.sorted { $0.date > $1.date }
+        guard sorted != wonWords else { return }
+        wonWords = sorted
         save()
     }
 

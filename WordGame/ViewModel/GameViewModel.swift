@@ -1,4 +1,3 @@
-import SwiftUI
 import Combine
 import UIKit
 
@@ -17,6 +16,7 @@ class GameViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var riddleText: String?
+    @Published var currentRiddleAnswer: String?
     @Published var showRiddlePopup = false
     @Published var hintDefinition: String?
     @Published var definitionRevealed = false
@@ -32,10 +32,22 @@ class GameViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let dictionaryService = DictionaryService()
-    private let riddleService = RiddleService()
+    private let dictionaryService: DictionaryProviding
+    private let riddleService: RiddleProviding
     var pawPointsStore: PawPointsStore?
     var wonWordsStore: WonWordsStore?
+
+    init(
+        dictionaryService: DictionaryProviding,
+        riddleService: RiddleProviding
+    ) {
+        self.dictionaryService = dictionaryService
+        self.riddleService = riddleService
+    }
+
+    convenience init() {
+        self.init(dictionaryService: DictionaryService(), riddleService: RiddleService())
+    }
 
     // MARK: - Computed helpers
 
@@ -63,6 +75,7 @@ class GameViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         riddleText = nil
+        currentRiddleAnswer = nil
         showRiddlePopup = false
         hintDefinition = nil
         definitionRevealed = false
@@ -100,6 +113,7 @@ class GameViewModel: ObservableObject {
                 // The riddle API answer is the secret word for the current session.
                 session = GameSession(secretWord: word, wordLength: wordLength)
                 riddleText = "🧩 \(result.riddle)"
+                currentRiddleAnswer = word
                 isLoading = false
                 isGameOver = false
                 isGameActive = true
@@ -139,7 +153,7 @@ class GameViewModel: ObservableObject {
         guard guess.count == s.wordLength else { triggerShake(); return }
         guard guess.allSatisfy({ $0.isLetter }) else { triggerShake(); return }
 
-        let results = evaluateGuess(guess, secret: s.secretWord)
+        let results = GameEngine.evaluateGuess(guess, secret: s.secretWord)
         // Save the submitted row and clear the input buffer.
         s.guesses.append(Guess(text: guess, results: results))
         s.currentGuess = ""
@@ -159,9 +173,7 @@ class GameViewModel: ObservableObject {
 
         // Staggered tile reveal animation
         let rowIndex = s.guesses.count - 1
-        withAnimation(.easeInOut(duration: 0.3)) {
-            _ = revealedRows.insert(rowIndex)
-        }
+        _ = revealedRows.insert(rowIndex)
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
@@ -207,9 +219,27 @@ class GameViewModel: ObservableObject {
 
     func playAgain() {
         isGameOver = false
+        session = nil
+        riddleText = nil
+        currentRiddleAnswer = nil
+        showRiddlePopup = false
+        hintDefinition = nil
+        definitionRevealed = false
+        keyboardState = [:]
+        revealedRows = []
+        errorMessage = nil
+        pawPointsEarned = 0
+        // Start a new game immediately with the same settings
+        startNewGame()
+    }
+
+    /// Return to the home / start screen without starting a new game.
+    func goHome() {
+        isGameOver = false
         isGameActive = false
         session = nil
         riddleText = nil
+        currentRiddleAnswer = nil
         showRiddlePopup = false
         hintDefinition = nil
         definitionRevealed = false
@@ -219,75 +249,16 @@ class GameViewModel: ObservableObject {
         pawPointsEarned = 0
     }
 
-    // MARK: - Share result (Wordle-style colored squares)
-
-    func shareText() -> String {
-        guard let session else { return "" }
-        let score = session.status == .won
-            ? "\(session.guesses.count)/\(session.maxAttempts)"
-            : "X/\(session.maxAttempts)"
-
-        let catLabel = category != .random ? " \(category.emoji)" : ""
-        var lines = ["Paw-dle\(catLabel) \(score)"]
-
-        if session.status == .won {
-            lines[0] += " (+\(Self.pawPointsForWin(guesses: session.guesses.count))\u{1F43E})"
-        }
-
-        lines.append("")
-        for guess in session.guesses {
-            let row = guess.results.map { r -> String in
-                switch r.state {
-                case .correct: return "🟩"
-                case .present: return "🟨"
-                case .absent, .unknown: return "⬜"
-                }
-            }.joined()
-            lines.append(row)
-        }
-        return lines.joined(separator: "\n")
-    }
-
     // MARK: - Scoring
 
     static func pawPointsForWin(guesses: Int) -> Int {
-        switch guesses {
-        case 1:  return 5
-        case 2:  return 4
-        case 3:  return 3
-        case 4:  return 2
-        default: return 1
-        }
+        GameEngine.pawPointsForWin(guesses: guesses)
     }
 
     // MARK: - Wordle evaluation (classic two-pass with duplicate handling)
 
     func evaluateGuess(_ guess: String, secret: String) -> [LetterResult] {
-        let g = Array(guess)
-        let s = Array(secret)
-        let n = g.count
-        var states = [LetterState](repeating: .absent, count: n)
-
-        // Build remaining-letter frequency from secret
-        var remaining: [Character: Int] = [:]
-        for c in s { remaining[c, default: 0] += 1 }
-
-        // Pass 1 – exact matches (green)
-        for i in 0..<n where g[i] == s[i] {
-            states[i] = .correct
-            remaining[g[i], default: 0] -= 1
-        }
-
-        // Pass 2 – present but wrong position (yellow)
-        for i in 0..<n {
-            guard states[i] != .correct else { continue }
-            if remaining[g[i], default: 0] > 0 {
-                states[i] = .present
-                remaining[g[i]]! -= 1
-            }
-        }
-
-        return (0..<n).map { LetterResult(letter: String(g[$0]), state: states[$0]) }
+        GameEngine.evaluateGuess(guess, secret: secret)
     }
 
     // MARK: - Private helpers
